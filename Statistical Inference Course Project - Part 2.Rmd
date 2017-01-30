@@ -1,0 +1,154 @@
+---
+title: "Statistical Inference Course Project - Part 2"
+author: "Emily Carr"
+date: "January 29, 2017"
+output: html_document
+---
+***
+# Part 2: Basic Inferential Data Analysis  
+  
+### Initial Data Exploration
+View the dataset details:
+```{r, echo=FALSE}
+?ToothGrowth
+```
+View the first few rows of the data:
+```{r}
+head(ToothGrowth)
+```
+Determine the number of rows/observations:
+```{r}
+nrow(ToothGrowth)
+```
+Look at the summary of the 3 variabes in the data:
+```{r}
+summary(ToothGrowth)
+```
+  
+The initial data exploration above shows that we have a total of 60 observations of tooth length, from 10 pigs measured at 3 Vitamin C dose levels and with 2 different delivery methods.  
+The 3 variables are **len** (tooth length), **supp** (Supplement Type, ascorbic acid vs Orange Juice), and **dose** (Vitamin C dosage in milligrams).  
+  
+### Data Cleaning
+Data comparison will be much easier with a factor vs. numeric instead of numeric vs. numeric. From the initial data exploration, we can tell that the **dose** variable is formatted as numeric, but with only three possible values, we can turn it into a factor:
+```{r}
+class(ToothGrowth$dose)
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+levels(ToothGrowth$dose)
+```
+  
+### Comparison of Impact of both Supplement Type and Dose on Tooth Length  
+Plotting **len** and coloring by both **supp** and **dose** will give us a visual aid to understand the relationships. The charts below show that *both variables have a relationship to tooth length*.
+```{r}
+par(mfrow=c(2,1))
+plot(ToothGrowth$len, col = ToothGrowth$supp, main = "Tooth Length colored by Supplement Type", xlab = "Observation Number", ylab = "Tooth Length")
+plot(ToothGrowth$len, col = ToothGrowth$dose, main = "Tooth Length colored by Dose Amount", xlab = "Observation Number", ylab = "Tooth Length")
+```
+
+An initial comparison of **supp** and **len** indicates that *OJ results in a longer tooth than VC*:
+```{r}
+OJsubset <- ToothGrowth[ToothGrowth$supp == 'OJ',]
+mean_lenOJ <- mean(OJsubset$len)
+VCsubset <- ToothGrowth[ToothGrowth$supp == 'VC',]
+mean_lenVC <- mean(VCsubset$len)
+```
+```{r}
+mean_lenOJ
+mean_lenVC
+```
+  
+An initial comparison of **dose** and **len** indicates that the *higher the dose of ascorbic acid, the longer the tooth* (where DoseA = 0.5mg, DoseB = 1mg, and DoseC = 2mg):
+```{r}
+DAsubset <- ToothGrowth[ToothGrowth$dose == '0.5',]
+mean_lenDA <- mean(DAsubset$len)
+DBsubset <- ToothGrowth[ToothGrowth$dose == '1',]
+mean_lenDB <- mean(DBsubset$len)
+DCsubset <- ToothGrowth[ToothGrowth$dose == '2',]
+mean_lenDC <- mean(DCsubset$len)
+```
+```{r}
+mean_lenDA
+mean_lenDB
+mean_lenDC
+```
+  
+  
+### Confidence Intervals
+Let's use Confidence Intervals to determine probability of tooth length given **supp** and **dose**. We'll use Student's T Confidence Intervals for differences between groups. We'll treat **supp** and **dose** as independent of each other (two separate analyses).
+  
+Analysis of **supp** Impact on **len**:
+```{r}
+#The two groups are the tooth length variables from OJsubset and VCsubset. We'll treat these as paired since they are not independent (measurements are taken from the same pigs in both cases).
+#Calculate Pooled Standard Deviation:
+    sd_pooled_supp <- sqrt(mean(var(OJsubset$len), var(VCsubset$len)))
+#Find t value
+    df_supp <- 10-1
+    alpha_supp <- 0.05
+    t_supp <- abs(qt(alpha_supp/2, df_supp))
+#Calculate Difference of the Means
+    mean_diff_supp <- mean(OJsubset$len) - mean(VCsubset$len)
+#Calculate 95% Confidence Interval
+    CIupper_supp <- mean_diff_supp + (t_supp*sd_pooled_supp*sqrt((1/nrow(OJsubset))+(1/nrow(VCsubset))))
+    CIlower_supp <- mean_diff_supp - (t_supp*sd_pooled_supp*sqrt((1/nrow(OJsubset))+(1/nrow(VCsubset))))
+#Combine into a Data Frame
+    CI_supp <- as.data.frame(cbind(CIlower_supp, CIupper_supp))
+    colnames(CI_supp) <- c("95% CI Lower Limit", "95% CI Upper Limit")
+    rownames(CI_supp) <- c("OJ-VC")
+    CI_supp
+#The 95% CI contains 0, so let's try a lower confidence to get a more useful answer:
+    alpha_supp2 <- 0.1
+    t_supp2 <- abs(qt(alpha_supp2/2, df_supp))
+    CIupper_supp2 <- mean_diff_supp + (t_supp2*sd_pooled_supp*sqrt((1/nrow(OJsubset))+(1/nrow(VCsubset))))
+    CIlower_supp2 <- mean_diff_supp - (t_supp2*sd_pooled_supp*sqrt((1/nrow(OJsubset))+(1/nrow(VCsubset))))
+    CI_supp2 <- as.data.frame(cbind(CIlower_supp2, CIupper_supp2))
+    colnames(CI_supp2) <- c("90% CI Lower Limit", "90% CI Upper Limit")
+    rownames(CI_supp2) <- c("OJ-VC")
+    CI_supp2
+```
+  
+Analysis of **dose** Impact on **len**:
+```{r}
+#Here we have three different groups to compare, but we can only do two at a time, so we'll break them up into three separate paired groups. The three pairs are DoseB-DoseA, DoseC-DoseB, and DoseC-DoseA. We'll treat these as paired since they are not independent (measurements are taken from the same pigs).
+#Calculate Pooled Standard Deviation:
+    sd_pooled_doseBA <- sqrt(mean(var(DBsubset$len), var(DAsubset$len)))
+    sd_pooled_doseCB <- sqrt(mean(var(DCsubset$len), var(DBsubset$len)))
+    sd_pooled_doseCA <- sqrt(mean(var(DCsubset$len), var(DAsubset$len)))
+#Find t value
+    df_dose <- 10-1
+    alpha_dose <- 0.05
+    t_dose <- abs(qt(alpha_dose/2, df_dose))
+#Calculate Difference of the Means
+    mean_diff_doseBA <- mean(DBsubset$len) - mean(DAsubset$len)
+    mean_diff_doseCB <- mean(DCsubset$len) - mean(DBsubset$len)
+    mean_diff_doseCA <- mean(DCsubset$len) - mean(DAsubset$len)
+#Calculate 95% Confidence Interval for each set of group
+    CIupper_doseBA <- mean_diff_doseBA + (t_dose*sd_pooled_doseBA*sqrt((1/nrow(DBsubset))+(1/nrow(DAsubset))))
+    CIlower_doseBA <- mean_diff_doseBA - (t_dose*sd_pooled_doseBA*sqrt((1/nrow(DBsubset))+(1/nrow(DAsubset))))
+    CI_doseBA <- cbind(CIlower_doseBA, CIupper_doseBA)
+     
+    CIupper_doseCB <- mean_diff_doseCB + (t_dose*sd_pooled_doseCB*sqrt((1/nrow(DCsubset))+(1/nrow(DBsubset))))
+    CIlower_doseCB <- mean_diff_doseCB - (t_dose*sd_pooled_doseCB*sqrt((1/nrow(DCsubset))+(1/nrow(DBsubset))))
+    CI_doseCB <- cbind(CIlower_doseCB, CIupper_doseCB)
+    
+    CIupper_doseCA <- mean_diff_doseCA + (t_dose*sd_pooled_doseCA*sqrt((1/nrow(DCsubset))+(1/nrow(DAsubset))))
+    CIlower_doseCA <- mean_diff_doseCA - (t_dose*sd_pooled_doseCA*sqrt((1/nrow(DCsubset))+(1/nrow(DAsubset))))
+    CI_doseCA <- cbind(CIlower_doseCA, CIupper_doseCA)
+#Combine the Confidence Intervals into a Data Frame
+    CI_dose <- as.data.frame(rbind(CI_doseBA, CI_doseCB, CI_doseCA))
+    colnames(CI_dose) <- c("95% CI Lower Limit", "95% CI Upper Limit")
+    rownames(CI_dose) <- c("DoseB-DoseA", "DoseC-DoseB", "DoseC-DoseA")
+    CI_dose
+```
+
+### Assumptions & Conclusions
+####Assumptions for Part 2:
+* ToothGrowth data is approximately normal.
+* The same 10 pigs were used for each of the 6 sets of measurements.
+* ToothGrowth data is randomly sampled & representative of the larger population.
+Note: The calculations do not assume equal variances; instead, we calculated pooled variances.  
+  
+####Conclusions for Part 2:
+* We can be 95% confident that:
+    + 1mg of either supplement will result in odontoblasts 6.0-12.3 length units longer than 0.5mg.
+    + 2mg of either supplement will result in odontoblasts 3.7-9.1 length units longer than 1mg and 12.8-18.2 length units longer than 0.5mg.
+* We can be 90% confident that Orange Juice will result in odontoblasts 0.57-6.8 length units longer than ascorbic acid.
+* Final Conclusion: Amount of Vitamin C has a higher correlation to odontoblast length, with the higher amount leading to longer teeth.

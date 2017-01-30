@@ -1,0 +1,69 @@
+---
+title: "Statistical Inference Course Project - Part 1"
+author: "Emily Carr"
+date: "January 29, 2017"
+output: html_document
+---
+***
+# Part 1: Simulation Exercise  
+  
+### Overview
+In Part 1, I'm investigating the **exponential distribution** and comparing it with the **Central Limit Theorem**. I'll use a large number of simulations to compare sample vs. theoretical mean & variance and determine whether the distribution is approximately normal.
+The theoretical mean and variance will be that of the **standard normal distribution**, because we expect, according to the Central Limit Theorem, that with a large sample size of a distribution of exponential averages, the distribution will look more like a standard normal rather than an exponential.
+  
+  
+### Simulations
+Below I'll perform 1000 simulations of a distribution of averages of 40 exponentials, using $\lambda = 2$:
+```{r}
+n <- 40
+lambda <- 2
+set.seed(1)
+expdistavg <- NULL
+for (i in 1 : 1000) expdistavg <- c(expdistavg, mean(rexp(n, lambda)))
+```
+  
+  
+  
+### Sample Mean vs. Theoretical Mean
+The theoretical mean of the sampling distribution is $\mu$, which is $1/\lambda$ given the exponential distrbution parameters:
+```{r}
+mean_t <- 1/lambda
+mean_t
+```
+The sample mean for the simulated distribution of averages is:
+```{r}
+mean_s <- mean(expdistavg)
+mean_s
+```
+Overlaying these values on the graph shows how close the sample mean is to the theoretical mean. Knowing the **Central Limit Theorem**, this is what we would expect from such a large sample size:
+```{r}
+hist(expdistavg, probability = TRUE, main = "Distribution of Exponential Averages")
+abline(v = mean_s, col = 4, lwd = 2, lty = 2)
+abline(v = mean_t, col = 4, lwd = 2, lty = 1)
+legend(x = "topright", legend = c("Sample Mean", "Theoretical Mean"), col = c(4, 4), lwd = c(2, 2), lty = c(2, 1), cex = 0.6)
+```
+  
+  
+  
+### Sample Variance vs. Theoretical Variance
+The theoretical variance of the sampling distribution is $\sigma^2/n$, which is $1/(n*\lambda^2)$ given the exponential distrbution parameters:
+```{r}
+var_t <- 1/(n*lambda^2)
+var_t
+```
+The sample variance for the simulated distribution of averages is:
+```{r}
+var_s <- var(expdistavg)
+var_s
+```
+The variability of the simulated distribution of averages is very close to the theoretical variance of a standard normal. It's clear that if we increased $n$, per the **Central Limit Theorem**, the variance will get closer and closer to 0, which is the variance of a **standard normal distribution**.
+  
+  
+  
+### Distribution
+Plotting the distrubution of averages against the normal density curve shows it is approximately normal:
+```{r}
+hist(expdistavg, probability = TRUE, main = "Distribution of Exponential Averages")
+curve(dnorm(x, mean = mean_t, sd = sqrt(var_t)), col = 3, lwd = 2, add = TRUE)
+legend(x = "topright", legend = c("Normal Density Curve"), col = c(3), lwd = c(2), lty = c(1), cex = 0.6)
+```
